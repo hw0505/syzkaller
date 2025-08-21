@@ -1,0 +1,46 @@
+# virtio-net device fuzzing description
+# 引入sock_type, packet_proto等定义
+
+resource virtio_net_fd[fd]
+
+# 打开 virtio-net 设备
+openat$virtio_net(dev_fd fd, path ptr[in, string["/dev/vhost-net"]], flags flags[open_flags], mode const[0]) virtio_net_fd
+
+# 配置 vhost-net（virtio-net userland control）
+ioctl$virtio_net_VHOST_SET_OWNER(fd virtio_net_fd, cmd const[0x4008af01])
+ioctl$virtio_net_VHOST_GET_FEATURES(fd virtio_net_fd, cmd const[0x8008af00], arg ptr[out, int64])
+ioctl$virtio_net_VHOST_SET_FEATURES(fd virtio_net_fd, cmd const[0x4008af00], arg ptr[in, int64])
+ioctl$virtio_net_VHOST_SET_VRING_NUM(fd virtio_net_fd, cmd const[0x4008af10], arg ptr[in, virtio_net_vhost_vring_state])
+ioctl$virtio_net_VHOST_SET_VRING_ADDR(fd virtio_net_fd, cmd const[0x4028af11], arg ptr[in, virtio_net_vhost_vring_addr])
+ioctl$virtio_net_VHOST_SET_VRING_BASE(fd virtio_net_fd, cmd const[0x4008af12], arg ptr[in, virtio_net_vhost_vring_state])
+ioctl$virtio_net_VHOST_GET_VRING_BASE(fd virtio_net_fd, cmd const[0x8008af12], arg ptr[out, virtio_net_vhost_vring_state])
+ioctl$virtio_net_VHOST_NET_SET_BACKEND(fd virtio_net_fd, cmd const[0x4008af20], arg ptr[in, virtio_net_vhost_vring_file])
+
+# 通用网络 socket
+socket$virtio_net(domain const[AF_PACKET], type flags[sock_type], proto flags[packet_proto]) fd
+bind$virtio_net(fd fd, addr ptr[in, sockaddr_ll], addrlen len[addr])
+sendto$virtio_net(fd fd, buf buffer[in], len len[buf], flags flags[send_flags], addr ptr[in, sockaddr_ll], addrlen len[addr])
+recvfrom$virtio_net(fd fd, buf buffer[out], len len[buf], flags flags[recv_flags], addr ptr[in, sockaddr_ll], addrlen len[addr])
+
+# structures
+virtio_net_vhost_vring_state {
+	index	int32
+	num	int32
+}
+
+virtio_net_vhost_vring_addr {
+	index		int32
+	flags		int32
+	desc_user	int64
+	avail_user	int64
+	used_user	int64
+	log_guest_addr	int64
+}
+
+virtio_net_vhost_vring_file {
+	index	int32
+	fd	int32
+}
+
+sock_type = SOCK_STREAM, SOCK_DGRAM, SOCK_RAW, SOCK_RDM, SOCK_SEQPACKET
+packet_proto = ETH_P_ALL, ETH_P_IP, ETH_P_ARP

@@ -1,0 +1,26 @@
+
+resource virtio_blk[fd]
+
+# 打开 virtio-blk 虚拟块设备（/dev/vda, /dev/vdb）
+openat$virtio_blk(dev fd, path ptr[in, string["/dev/vda"]], flags flags[open_flags], mode const[0]) virtio_blk
+
+# 读写操作：可以触发底层 virtqueue 请求处理
+read$virtio_blk(fd virtio_blk, buf buffer[out], count len[buf])
+write$virtio_blk(fd virtio_blk, buf buffer[in], count len[buf])
+
+# ioctl: 只列出 virtio-blk 实际支持的子集
+
+# 获取设备大小（单位：字节）
+ioctl$virtio_blk_BLKGETSIZE64(fd virtio_blk, cmd const[0x80081272], arg ptr[out, int64])
+
+# 丢弃一段扇区，通常支持 discard 命令（需设备支持）
+ioctl$virtio_blk_BLKDISCARD(fd virtio_blk, cmd const[0x1277], arg ptr[in, array[int64, 2]])
+
+# 冲刷缓存
+ioctl$virtio_blk_BLKFLSBUF(fd virtio_blk, cmd const[0x1261])
+
+# 设置只读模式（可能不支持）
+ioctl$virtio_blk_BLKROSET(fd virtio_blk, cmd const[0x125d], arg ptr[in, int32])
+
+# 查询是否为只读
+ioctl$virtio_blk_BLKROGET(fd virtio_blk, cmd const[0x125e], arg ptr[out, int32])

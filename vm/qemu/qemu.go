@@ -126,7 +126,8 @@ type archConfig struct {
 
 var archConfigs = map[string]*archConfig{
 	"linux/amd64": {
-		Qemu:     "qemu-system-x86_64",
+		Qemu: "/home/hw/qemu-4.2.0/build/x86_64-softmmu/qemu-system-x86_64",
+		//Qemu:     "qemu-system-x86_64",
 		QemuArgs: "-enable-kvm -cpu host,migratable=off",
 		// e1000e fails on recent Debian distros with:
 		// Initialization of device e1000e failed: failed to find romfile "efi-e1000e.rom
@@ -493,6 +494,29 @@ func (inst *instance) boot() error {
 
 func (inst *instance) buildQemuArgs() ([]string, error) {
 	args := []string{
+		"-enable-kvm",
+		"-machine", "q35,kernel_irqchip=on,sata=off,smbus=off",
+		"-cpu", "host,-la57",
+		"-smp", "1",
+		"-m", "1G",
+		"-bios", "/home/hw/workdir/TDVF_sdv_1G.fd",
+		"-kernel", "/home/hw/tdx-linux/arch/x86/boot/bzImage",
+		"-append", "console=hvc0 init=/sbin/init root=/dev/vda rw nokaslr force_tdx_guest tdx_wlist_devids=pci:0x8086:0x29c0,acpi:PNP0501 mitigations=off mce=off net.ifnames=0",
+		"-drive", "id=drive0,file=/home/hw/image/bullseye.img,if=virtio",
+		"-chardev", fmt.Sprintf("socket,id=SOCKSYZ,server=on,wait=off,host=localhost,port=%v", inst.monport),
+		"-mon", "chardev=SOCKSYZ,mode=control",
+		"-device", "virtio-serial",
+		"-device", "virtconsole,chardev=char0",
+		"-chardev", "stdio,mux=on,id=char0,signal=off",
+		"-mon", "chardev=char0,mode=readline",
+		"-netdev", fmt.Sprintf("user,id=net0,restrict=on,hostfwd=tcp:127.0.0.1:%v-:22", inst.Port),
+		"-device", "virtio-net-pci,netdev=net0",
+		"-snapshot",
+		"-no-reboot",
+		"-nographic",
+		"-nodefaults",
+	}
+	/*args := []string{
 		"-m", strconv.Itoa(inst.cfg.Mem),
 		"-smp", strconv.Itoa(inst.cfg.CPU),
 		"-chardev", fmt.Sprintf("socket,id=SOCKSYZ,server=on,wait=off,host=localhost,port=%v", inst.monport),
@@ -579,7 +603,7 @@ func (inst *instance) buildQemuArgs() ([]string, error) {
 			return nil, err
 		}
 		args = append(args, snapshotArgs...)
-	}
+	}*/
 	return args, nil
 }
 
