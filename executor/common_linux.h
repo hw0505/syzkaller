@@ -5921,6 +5921,10 @@ static long syz_kfuzztest_run(volatile long test_name_ptr, volatile long input_d
 
 #if SYZ_EXECUTOR || __NR_syz_prepare_data
 
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
 // 必须与驱动中的定义一致
 #define CMD_PREPARE_DATA 0xF510 // _IO(0xF5, 0x10)
 
