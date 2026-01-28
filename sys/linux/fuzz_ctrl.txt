@@ -1,0 +1,36 @@
+# 1. 定义数据结构 (必须与 C 代码一致)
+# 对应 struct fuzz_input
+fuzz_input {
+    msr_data    array[int8, 1024]
+    cpuid_data  array[int8, 1024]
+    pio_data    array[int8, 1024]
+    mmio_data   array[int8, 1024]
+    dma_data    array[int8, 65536]
+}
+
+# 2. 定义【复杂功能】的伪系统调用
+# syz_prepare_data: 专门用于生成 fuzz_input 并传递给驱动
+# 我们将在 executor/common_linux.h 中实现它
+syz_prepare_data(data ptr[in, fuzz_input])
+
+# 3. 定义资源 fd (用于后续的标准 ioctl)
+resource fd_fuzz_ctrl[fd]
+
+# 4. 打开设备
+openat$fuzz_ctrl(fd const[AT_FDCWD], file ptr[in, string["/dev/fuzz_ctrl"]], flags flags[open_flags], mode const[0]) fd_fuzz_ctrl
+
+# 5. 定义【简单功能】的标准 IOCTL
+# 这些不需要写 C++ 代码，Syzkaller 会自动生成标准的 ioctl 调用
+# 你的驱动会自动处理这些 cmd
+
+# FUZZ_ENABLE: _IOW(0xF5, 1, int) -> 0x4004F501
+ioctl$FUZZ_ENABLE(fd fd_fuzz_ctrl, cmd const[0x4004F501], arg ptr[in, int32])
+
+# FUZZ_DISABLE: _IO(0xF5, 2) -> 0xF502
+# ioctl$FUZZ_DISABLE(fd fd_fuzz_ctrl, cmd const[0xF502], arg const[0])
+
+# READ_PORT8: _IOW(0xF5, 4, int) -> 0x4004F504
+# ioctl$READ_PORT8(fd fd_fuzz_ctrl, cmd const[0x4004F504], arg ptr[in, int32])
+
+# INJECT_IRQ_TEST: _IOW(0xF5, 9, int) -> 0x4004F509
+# ioctl$INJECT_IRQ_TEST(fd fd_fuzz_ctrl, cmd const[0x4004F509], arg ptr[in, int32])

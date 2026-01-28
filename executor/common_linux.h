@@ -5918,3 +5918,34 @@ static long syz_kfuzztest_run(volatile long test_name_ptr, volatile long input_d
 }
 
 #endif
+
+#if SYZ_EXECUTOR || __NR_syz_prepare_data
+
+// 必须与驱动中的定义一致
+#define CMD_PREPARE_DATA 0xF510 // _IO(0xF5, 0x10)
+
+static long syz_prepare_data(volatile long a0)
+{
+    // a0 是 Syzkaller Manager 生成的随机数据的指针
+    void *data = (void *)a0;
+    int fd, ret;
+
+    // 1. 打开设备
+    // 借鉴 patch 的实现，这里独立打开一个 fd 专门用于注入数据
+    fd = open("/dev/fuzz_ctrl", O_RDWR);
+    if (fd < 0) {
+        // 如果打开失败，不崩溃，只是返回错误
+        return -1;
+    }
+
+    // 2. 触发驱动逻辑
+    // 这一步执行后，CPU 会陷入内核态，执行你的 fuzz_ctrl_ioctl 函数
+    // 进入 case PREPARE_DATA 分支
+    ret = ioctl(fd, CMD_PREPARE_DATA, data);
+
+    // 3. 关闭 fd
+    close(fd);
+
+    return ret;
+}
+#endif
